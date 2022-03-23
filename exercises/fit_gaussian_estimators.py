@@ -40,14 +40,46 @@ def test_univariate_gaussian():
 
 def test_multivariate_gaussian():
     # Question 4 - Draw samples and print fitted model
-    raise NotImplementedError()
+    mu = np.array([0,0,4,0])
+    sigma = np.array([
+            [1,0.2,0,0.5],
+            [0.2,2,0,0],
+            [0,0,1,0],
+            [0.5,0,0,1]
+        ])
+    
+    samples = np.random.multivariate_normal(mu, sigma, 1000)
+    multi_gauss = MultivariateGaussian()
+    multi_gauss.fit(samples)
+    print(multi_gauss.mu_)
+    print(multi_gauss.cov_)
 
     # Question 5 - Likelihood evaluation
-    raise NotImplementedError()
+    ms = np.linspace(-10, 10, 200).astype(np.float64)
+    log_MLEs = []
+    for f1 in ms:
+        for f3 in ms:
+            mu_ = np.array([f1, 0, f3, 0])
+            log_likelihood = MultivariateGaussian.log_likelihood(mu_, sigma, samples)
+            log_MLEs.append(log_likelihood)
+
+    log_MLEs = np.array(log_MLEs).reshape((ms.size,ms.size))
+    
+    fig = go.Figure([go.Histogram2dContour(x=log_MLEs[:, 0], y=log_MLEs[:, 1], 
+            colorscale = 'Blues', reversescale = True, xaxis = 'x', yaxis = 'y')],
+          layout=go.Layout(title=r"$\text{ Log Likelihood heatmap }$",
+                  xaxis_title="r$ \\tilde{\mu}=[f_{1},0,f_{3}^{j},0]:f_{3}^{j}\\in\\left[np.linspace(-10,10,200)\\right] $",
+                  yaxis_title="r$ \\tilde{\mu}=[f_{1}^{i},0,f_{3},0]:f_{1}^{i}\\in\\left[np.linspace(-10,10,200)\\right] $",
+                  height=500))
+    fig.show()
+    
 
     # Question 6 - Maximum likelihood
-    raise NotImplementedError()
-
+    max_value = np.max(log_MLEs)
+    locations = zip(*np.where(log_MLEs == max_value))
+    print("max value",max_value)
+    for loc in locations:
+        print("f1 is", ms[loc[0]], "f3 is", ms[loc[1]])
 
 if __name__ == '__main__':
     np.random.seed(0)
