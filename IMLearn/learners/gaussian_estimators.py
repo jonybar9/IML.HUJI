@@ -156,7 +156,12 @@ class MultivariateGaussian:
         Sets `self.mu_`, `self.cov_` attributes according to calculated estimation.
         Then sets `self.fitted_` attribute to `True`
         """
-        raise NotImplementedError()
+        
+        self.mu_ = np.mean(X, 0)
+        denominator = X.shape[0] - 1
+        centered = X - self.mu_
+        self.cov_ = np.matmul(centered.transpose(), centered) / denominator
+
 
         self.fitted_ = True
         return self
@@ -181,7 +186,17 @@ class MultivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        raise NotImplementedError()
+
+        # Safer cov_det calculation
+        sign, logdet = slogdet(self.cov_)
+        cov_det = sign * np.exp(logdet)
+
+        dim = X.shape[1]
+        denominator = np.sqrt(np.power(2 * np.pi, dim) * cov_det)
+        X_centered = X - self.mu_
+        cov_inv = inv(self.cov_)
+        exponent_arg = -0.5 * np.linalg.multi_dot([X_centered, cov_inv, X_centered.transpose()])
+        return np.exp(exponent_arg) / denominator
 
     @staticmethod
     def log_likelihood(mu: np.ndarray, cov: np.ndarray, X: np.ndarray) -> float:
@@ -202,4 +217,18 @@ class MultivariateGaussian:
         log_likelihood: float
             log-likelihood calculated over all input data and under given parameters of Gaussian
         """
-        raise NotImplementedError()
+        m, d = X.shape
+        first_additive = (d * m) * np.log(2 * np.pi) / 2
+        _, cov_logdet = slogdet(cov)
+        sec_additive = m *  cov_logdet  / 2
+
+        sig_inv = inv(cov)
+        X_centered = X - mu
+        per_row_multiplication = []
+        for j in range(X_centered.shape[0]):
+            X_centered_j = X_centered[j].reshape(1,4)
+            X_centered_j_trans = X_centered[j].reshape(4,1)
+            per_row_multiplication.append(X_centered_j @ sig_inv @ X_centered_j_trans)
+
+        third_additive = np.sum(per_row_multiplication) / 2
+        return (- first_additive - sec_additive - third_additive)
